@@ -41,46 +41,6 @@ def get_codeforces_rating(handle):
         return response["result"][0].get("rating", "N/A")
     return "N/A"
 
-def get_highest_rated_problem_rating(handle):
-    """Obtiene el rating y enlace del problema más difícil resuelto por un usuario."""
-    try:
-        contests_url = f"https://codeforces.com/api/user.rating?handle={handle}"
-        contests_response = requests.get(contests_url).json()
-        
-        if contests_response["status"] != "OK":
-            return None, None
-        
-        contest_ids = {contest["contestId"] for contest in contests_response["result"]}
-        hardest_problem = None
-
-        for contest_id in contest_ids:
-            submissions_url = f"https://codeforces.com/api/contest.status?contestId={contest_id}&handle={handle}"
-            submissions_response = requests.get(submissions_url).json()
-            
-            if submissions_response["status"] != "OK":
-                continue
-            
-            submissions = submissions_response["result"]
-            
-            for submission in submissions:
-                if (submission["verdict"] == "OK" and 
-                    "problem" in submission and 
-                    submission["author"]["participantType"] == "CONTESTANT"):
-                    
-                    problem = submission["problem"]
-                    if "rating" in problem:
-                        if not hardest_problem or problem["rating"] > hardest_problem["rating"]:
-                            hardest_problem = {
-                                "rating": problem["rating"],
-                                "link": f"https://codeforces.com/contest/{contest_id}/problem/{problem['index']}"
-                            }
-        
-        if hardest_problem:
-            return hardest_problem["rating"], hardest_problem["link"]
-        return None, None
-    except:
-        return None, None
-
 def get_ranks_IOI(participant_stats_url):
     """Obtiene los rankings de IOI de un participante por año."""
     soup = get_soup(participant_stats_url)
@@ -97,11 +57,11 @@ def get_ranks_IOI(participant_stats_url):
     
     return ranks
 
-def save_to_csv(data, filename="ioi_codeforces_high.csv"):
+def save_to_csv(data, filename="dataset_completo.csv"):
     """Guarda los datos en un archivo CSV."""
     with open(filename, mode="w", newline="", encoding="utf-8") as file:
         writer = csv.writer(file)
-        header = ["Nombre", "Rating de Codeforces", "Problema Más Difícil"] + [f"Ranking IOI {year}" for year in range(2019, 2025)]
+        header = ["Nombre", "Handle de Codeforces", "Rating de Codeforces"] + [f"Ranking IOI {year}" for year in range(2019, 2025)]
         writer.writerow(header)
         writer.writerows(data)
 
@@ -112,12 +72,7 @@ def main():
     
     data = []
     
-    cant = 0
     for row in rows:    
-        cant += 1
-        if cant == 3:
-            break
-        
         nombre, link, pais = get_participant_data(row)
         stats_link = get_stats_link(link)
         
@@ -127,19 +82,13 @@ def main():
             ranks = {year: "N/A" for year in range(2019, 2025)}
         
         handle = get_codeforces_handle(link)
-        if handle:
-            rating = get_codeforces_rating(handle)
-            highest_problem_rating, _ = get_highest_rated_problem_rating(handle)
-        else:
-            rating = "N/A"
-            highest_problem_rating = "N/A"
-        
-        print(nombre, rating, highest_problem_rating, ranks)
-        row_data = [nombre, rating, highest_problem_rating] + [ranks[year] for year in range(2019, 2025)]
+        rating = get_codeforces_rating(handle) if handle else "N/A"
+        print(nombre, handle, rating, ranks)
+        row_data = [nombre, handle if handle else "N/A", rating] + [ranks[year] for year in range(2019, 2025)]
         data.append(row_data)
     
     save_to_csv(data)
-    print("Datos guardados en 'ioi_codeforces.csv'.")
+    print("Datos guardados en 'dataset_completo.csv'.")
 
 if __name__ == "__main__":
     main()

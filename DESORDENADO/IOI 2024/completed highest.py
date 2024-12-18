@@ -38,7 +38,8 @@ def averageLastContest(handle):
             sum += aux
             cant += 1
         ind += 1
-        
+    if cant == 0:
+        return None
     return sum / cant
 
 
